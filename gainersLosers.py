@@ -1,0 +1,118 @@
+import numpy as np
+import pandas as pd
+from pandas.core.indexes import period
+import yfinance as yf
+from datetime import date, datetime, timedelta
+import os
+import time
+import requests
+from datawrapper import Datawrapper
+
+ACCESS_TOKEN = os.getenv('DW_API_KEY')
+
+dw = Datawrapper(access_token=ACCESS_TOKEN)
+
+def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
+    dw.add_data(
+    chart_id=dw_chart_id,
+    data=dataSet
+    )
+
+    time.sleep(2)
+
+    headers = {
+    "Accept": "*/*",
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + dw_api_key
+    }
+
+    response = requests.request(method="PATCH", 
+                                url="https://api.datawrapper.de/v3/charts/" + dw_chart_id, 
+                                json={"metadata": {
+                                        "annotate": {
+                                            "notes": "Data from Yahoo Finance. Updated " + str(updateDate.strftime('%B %d, %Y'))
+                                    }
+                                }},
+                                headers=headers)
+
+    response.raise_for_status()
+
+    time.sleep(2)
+
+    dw.publish_chart(chart_id=dw_chart_id)
+
+
+table = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
+sAndP = table[0]
+
+sAndPRef = sAndP[['Symbol', 'Security']]
+sAndPRef.rename(columns={"Symbol":"Ticker", "Security":"Company Name"}, inplace=True)   
+
+spTickers = ' '.join(sAndP['Symbol'])
+
+glRaw = yf.download(
+        tickers = spTickers,
+        period = '2d',
+        interval = '1d',
+        group_by = 'ticker',
+        auto_adjust = False,
+        prepost = False,
+        threads = True,
+        proxy = None
+    )
+
+gl = glRaw.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
+
+gl.reset_index(level=0,inplace=True)
+
+gl.to_csv('gl.csv', index=False)
+# gl = pd.read_csv('gl.csv')
+
+maxDate = gl['Date'].max()
+minDate = gl['Date'].min()
+
+todayGL = gl[gl['Date'] == maxDate].sort_values(by='Ticker')
+yesterdayGL = gl[gl['Date'] == minDate].sort_values(by='Ticker') 
+
+todayYest = zip(todayGL['Close'], yesterdayGL['Close'])
+def getPctChg(New, Old):
+    pctChg = (New - Old) / (Old)
+    return pctChg
+
+glPctChg = list(map(lambda x,y: getPctChg(x, y), todayGL['Close'],yesterdayGL['Close']))
+
+fullGL = todayGL[['Date', 'Ticker', 'Close']]
+fullGL['1 Day Returns'] = pd.Series(glPctChg).values
+fullGL['Close'] = [round(x, 2) for x in fullGL['Close']]
+
+fullGL = fullGL.merge(sAndPRef, how='left', on='Ticker')
+
+
+biggestLosers = fullGL.sort_values(by=['1 Day Returns']).iloc[0:10,:].reset_index()
+biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[0:10,:].reset_index()
+
+biggestLosers.rename(columns={'1 Day Returns':'1 Day Losses'}, inplace=True)
+biggestGainers.rename(columns={'1 Day Returns':'1 Day Gains'}, inplace=True)
+
+biggestLosers.rename(columns={'Close':'Latest Price'}, inplace=True)
+biggestGainers.rename(columns={'Close':'Latest Price'}, inplace=True)
+
+biggestLosers['1 Day Losses'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestLosers['1 Day Losses']]
+biggestGainers['1 Day Gains'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestGainers['1 Day Gains']]
+
+
+biggestLosers['Biggest Losses'] = biggestLosers[['Company Name', 'Ticker']].agg(' '.join, axis=1)
+biggestGainers['Biggest Gains'] = biggestGainers[['Company Name', 'Ticker']].agg(' '.join, axis=1)
+
+blFinal = biggestLosers[['Biggest Losses', 'Latest Price', '1 Day Losses']]
+bgFinal = biggestGainers[['Biggest Gains', 'Latest Price', '1 Day Gains']]
+
+
+biggestLG = pd.concat([bgFinal, blFinal], axis=1)
+
+fileDate = datetime.strptime(maxDate, "%Y-%m-%d").date()
+
+updateChart('k53KU', biggestLG, fileDate, ACCESS_TOKEN)
+
+
+
