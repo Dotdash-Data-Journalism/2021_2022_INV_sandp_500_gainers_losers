@@ -30,7 +30,7 @@ def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
                                 url="https://api.datawrapper.de/v3/charts/" + dw_chart_id, 
                                 json={"metadata": {
                                         "annotate": {
-                                            "notes": "Data from Yahoo Finance. Updated " + str(updateDate.strftime('%B %d, %Y'))
+                                            "notes": "Data from Yahoo Finance. Updated " + fileDate
                                     }
                                 }},
                                 headers=headers)
@@ -65,7 +65,7 @@ gl = glRaw.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
 
 gl.reset_index(level=0,inplace=True)
 
-gl.to_csv('gl.csv', index=False)
+gl.to_csv('rawYFinance.csv', index=False)
 # gl = pd.read_csv('gl.csv')
 
 maxDate = gl['Date'].max()
@@ -111,9 +111,6 @@ bgFinal = biggestGainers[['Biggest Gains', 'Latest Price', '1 Day Gains']]
 biggestLG = pd.concat([bgFinal, blFinal], axis=1)
 biggestLG.to_csv('gl.csv', index=False)
 
-fileDate = datetime.strptime(str(maxDate), "%Y-%m-%d").date()
+fileDate = str(datetime.today().strftime('%B %d, %Y'))
 
 updateChart('k53KU', biggestLG, fileDate, ACCESS_TOKEN)
-
-
-
