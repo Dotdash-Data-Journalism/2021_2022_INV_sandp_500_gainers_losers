@@ -65,7 +65,7 @@ gl = glRaw.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
 
 gl.reset_index(level=0,inplace=True)
 
-# gl.to_csv('gl.csv', index=False)
+gl.to_csv('gl.csv', index=False)
 # gl = pd.read_csv('gl.csv')
 
 maxDate = gl['Date'].max()
@@ -111,7 +111,7 @@ bgFinal = biggestGainers[['Biggest Gains', 'Latest Price', '1 Day Gains']]
 biggestLG = pd.concat([bgFinal, blFinal], axis=1)
 biggestLG.to_csv('gl.csv', index=False)
 
-fileDate = datetime.strptime(maxDate, "%Y-%m-%d").date()
+fileDate = datetime.strptime(str(maxDate), "%Y-%m-%d").date()
 
 updateChart('k53KU', biggestLG, fileDate, ACCESS_TOKEN)
 
