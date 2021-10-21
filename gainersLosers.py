@@ -113,7 +113,7 @@ biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[
 biggestLosers.rename(columns={'1 Day Returns':'1 Day Losses'}, inplace=True)
 biggestGainers.rename(columns={'1 Day Returns':'1 Day Gains'}, inplace=True)
 
-biggestLosers.rename(columns={'Close':'Latest Price'}, inplace=True)
+biggestLosers.rename(columns={'Close':'Latest Price '}, inplace=True)
 biggestGainers.rename(columns={'Close':'Latest Price'}, inplace=True)
 
 biggestLosers['1 Day Losses'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestLosers['1 Day Losses']]
