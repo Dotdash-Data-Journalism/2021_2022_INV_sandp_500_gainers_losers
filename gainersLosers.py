@@ -66,7 +66,7 @@ gl = glRaw.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
 gl.reset_index(level=0,inplace=True)
 
 gl.to_csv('rawYFinance.csv', index=False)
-# gl = pd.read_csv('gl.csv')
+# gl = pd.read_csv('rawYFinance.csv')
 
 maxDate = gl['Date'].max()
 minDate = gl['Date'].min()
@@ -74,14 +74,33 @@ minDate = gl['Date'].min()
 todayGL = gl[gl['Date'] == maxDate].sort_values(by='Ticker')
 yesterdayGL = gl[gl['Date'] == minDate].sort_values(by='Ticker') 
 
-todayYest = zip(todayGL['Close'], yesterdayGL['Close'])
+todayGL.rename(columns={'Date': 'Today Date', 
+                        'Adj Close': 'Today Adj Close', 
+                        'Close': 'Today Close', 
+                        'High': 'Today High',
+                        'Low': 'Today Low',
+                        'Open': 'Today Open',
+                        'Volume': 'Today Volume'}, inplace=True)
+
+yesterdayGL.rename(columns={'Date': 'Yesterday Date', 
+                        'Adj Close': 'Yesterday Adj Close', 
+                        'Close': 'Yesterday Close', 
+                        'High': 'Yesterday High',
+                        'Low': 'Yesterday Low',
+                        'Open': 'Yesterday Open',
+                        'Volume': 'Yesterday Volume'}, inplace=True)
+
+comboGL = pd.merge(todayGL, yesterdayGL, on='Ticker', how='inner')
+
 def getPctChg(New, Old):
     pctChg = (New - Old) / (Old)
     return pctChg
 
-glPctChg = list(map(lambda x,y: getPctChg(x, y), todayGL['Close'],yesterdayGL['Close']))
+glPctChg = list(map(lambda x,y: getPctChg(x, y), comboGL['Today Close'],comboGL['Yesterday Close']))
 
-fullGL = todayGL[['Date', 'Ticker', 'Close']]
+comboGL.rename(columns={'Today Date': 'Date', 'Today Close': 'Close'}, inplace=True)
+
+fullGL = comboGL[['Date', 'Ticker', 'Close']]
 fullGL['1 Day Returns'] = pd.Series(glPctChg).values
 fullGL['Close'] = [round(x, 2) for x in fullGL['Close']]
 
@@ -109,6 +128,7 @@ bgFinal = biggestGainers[['Biggest Gains', 'Latest Price', '1 Day Gains']]
 
 
 biggestLG = pd.concat([bgFinal, blFinal], axis=1)
+
 biggestLG.to_csv('gl.csv', index=False)
 
 fileDate = str(datetime.today().strftime('%B %d, %Y'))
