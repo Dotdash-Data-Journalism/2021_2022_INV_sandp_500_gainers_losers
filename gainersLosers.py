@@ -46,7 +46,9 @@ table = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
 sAndP = table[0]
 
 sAndPRef = sAndP[['Symbol', 'Security']]
-sAndPRef.rename(columns={"Symbol":"Ticker", "Security":"Company Name"}, inplace=True)   
+sAndPRef.rename(columns={"Symbol":"Ticker", "Security":"Company Name"}, inplace=True)
+
+sAndP['Symbol'] = sAndP['Symbol'].str.replace('.', '-')
 
 spTickers = ' '.join(sAndP['Symbol'])
 
@@ -113,8 +115,8 @@ biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[
 biggestLosers.rename(columns={'1 Day Returns':'1 Day Losses'}, inplace=True)
 biggestGainers.rename(columns={'1 Day Returns':'1 Day Gains'}, inplace=True)
 
-biggestLosers.rename(columns={'Close':'Latest Price '}, inplace=True)
-biggestGainers.rename(columns={'Close':'Latest Price'}, inplace=True)
+biggestLosers.rename(columns={'Close':'Latest Losers Price'}, inplace=True)
+biggestGainers.rename(columns={'Close':'Latest Gainers Price'}, inplace=True)
 
 biggestLosers['1 Day Losses'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestLosers['1 Day Losses']]
 biggestGainers['1 Day Gains'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestGainers['1 Day Gains']]
@@ -123,8 +125,8 @@ biggestGainers['1 Day Gains'] = ['{0:.2f}'.format(x * 100) + '%' for x in bigges
 biggestLosers['Biggest Losses'] = biggestLosers[['Company Name', 'Ticker']].agg(' '.join, axis=1)
 biggestGainers['Biggest Gains'] = biggestGainers[['Company Name', 'Ticker']].agg(' '.join, axis=1)
 
-blFinal = biggestLosers[['Biggest Losses', 'Latest Price ', '1 Day Losses']]
-bgFinal = biggestGainers[['Biggest Gains', 'Latest Price', '1 Day Gains']]
+blFinal = biggestLosers[['Biggest Losses', 'Latest Losers Price', '1 Day Losses']]
+bgFinal = biggestGainers[['Biggest Gains', 'Latest Gainers Price', '1 Day Gains']]
 
 
 biggestLG = pd.concat([bgFinal, blFinal], axis=1)
