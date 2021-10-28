@@ -127,8 +127,8 @@ biggestLosers['1 Day Losses'] = ['{0:.2f}'.format(x * 100) + '%' for x in bigges
 biggestGainers['1 Day Gains'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestGainers['1 Day Gains']]
 
 
-biggestLosers['Biggest Losses'] = biggestLosers[['Company Name', 'Ticker']].agg(' '.join, axis=1)
-biggestGainers['Biggest Gains'] = biggestGainers[['Company Name', 'Ticker']].agg(' '.join, axis=1)
+biggestLosers['Biggest Losses'] = biggestLosers[['Ticker', 'Company Name']].agg(', '.join, axis=1)
+biggestGainers['Biggest Gains'] = biggestGainers[['Ticker', 'Company Name']].agg(', '.join, axis=1)
 
 blFinal = biggestLosers[['Biggest Losses', 'Latest Losers Price', '1 Day Losses']]
 bgFinal = biggestGainers[['Biggest Gains', 'Latest Gainers Price', '1 Day Gains']]
