@@ -42,11 +42,16 @@ def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
     dw.publish_chart(chart_id=dw_chart_id)
 
 
-table = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
-sAndP = table[0]
+# table = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
+# sAndP = table[0]
 
-sAndPRef = sAndP[['Symbol', 'Security']]
-sAndPRef.rename(columns={"Symbol":"Ticker", "Security":"Company Name"}, inplace=True)
+# sAndPRef = sAndP[['Symbol', 'Security']]
+# sAndPRef.rename(columns={"Symbol":"Ticker", "Security":"Company Name"}, inplace=True)
+
+sAndP = pd.read_csv('S&P500.csv', names=['Symbol', 'Security'], sep=",",
+                    dtype={'Symbol':str, 'Security':str}, skiprows=1)
+sAndPRef = pd.read_csv('S&P500.csv', names=['Ticker', 'Company Name'], sep=",",
+                        dtype={'Ticker':str, 'Company Name':str}, skiprows=1)
 
 sAndP['Symbol'] = sAndP['Symbol'].str.replace('.', '-')
 
