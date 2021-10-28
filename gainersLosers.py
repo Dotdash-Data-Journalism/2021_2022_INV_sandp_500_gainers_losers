@@ -114,8 +114,8 @@ fullGL['Close'] = [round(x, 2) for x in fullGL['Close']]
 fullGL = fullGL.merge(sAndPRef, how='left', on='Ticker')
 
 
-biggestLosers = fullGL.sort_values(by=['1 Day Returns']).iloc[0:10,:].reset_index()
-biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[0:10,:].reset_index()
+biggestLosers = fullGL.sort_values(by=['1 Day Returns']).iloc[0:8,:].reset_index()
+biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[0:8,:].reset_index()
 
 biggestLosers.rename(columns={'1 Day Returns':'1 Day Losses'}, inplace=True)
 biggestGainers.rename(columns={'1 Day Returns':'1 Day Gains'}, inplace=True)
