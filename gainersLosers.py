@@ -117,21 +117,21 @@ fullGL = fullGL.merge(sAndPRef, how='left', on='Ticker')
 biggestLosers = fullGL.sort_values(by=['1 Day Returns']).iloc[0:8,:].reset_index()
 biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[0:8,:].reset_index()
 
-biggestLosers.rename(columns={'1 Day Returns':'1 Day Losses'}, inplace=True)
-biggestGainers.rename(columns={'1 Day Returns':'1 Day Gains'}, inplace=True)
+biggestLosers.rename(columns={'1 Day Returns':'% Loss'}, inplace=True)
+biggestGainers.rename(columns={'1 Day Returns':'% Gain'}, inplace=True)
 
-biggestLosers.rename(columns={'Close':'Latest Losers Price'}, inplace=True)
-biggestGainers.rename(columns={'Close':'Latest Gainers Price'}, inplace=True)
+biggestLosers.rename(columns={'Close':'Price\u061C'}, inplace=True)
+biggestGainers.rename(columns={'Close':'Price'}, inplace=True)
 
-biggestLosers['1 Day Losses'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestLosers['1 Day Losses']]
-biggestGainers['1 Day Gains'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestGainers['1 Day Gains']]
+biggestLosers['% Loss'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestLosers['% Loss']]
+biggestGainers['% Gain'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestGainers['% Gain']]
 
 
 biggestLosers['Biggest Losses'] = biggestLosers[['Ticker', 'Company Name']].agg(', '.join, axis=1)
 biggestGainers['Biggest Gains'] = biggestGainers[['Ticker', 'Company Name']].agg(', '.join, axis=1)
 
-blFinal = biggestLosers[['Biggest Losses', 'Latest Losers Price', '1 Day Losses']]
-bgFinal = biggestGainers[['Biggest Gains', 'Latest Gainers Price', '1 Day Gains']]
+blFinal = biggestLosers[['Biggest Losses', 'Price\u061C', '% Loss']]
+bgFinal = biggestGainers[['Biggest Gains', 'Price', '% Gain']]
 
 
 biggestLG = pd.concat([bgFinal, blFinal], axis=1)
