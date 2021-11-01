@@ -53,7 +53,7 @@ sAndP = pd.read_csv('S&P500.csv', names=['Symbol', 'Security'], sep=",",
 sAndPRef = pd.read_csv('S&P500.csv', names=['Ticker', 'Company Name'], sep=",",
                         dtype={'Ticker':str, 'Company Name':str}, skiprows=1)
 
-sAndP['Symbol'] = sAndP['Symbol'].str.replace('.', '-')
+sAndP['Symbol'] = sAndP['Symbol'].str.replace('.', '-', regex=False)
 
 spTickers = ' '.join(sAndP['Symbol'])
 
