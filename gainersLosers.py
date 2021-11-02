@@ -55,9 +55,17 @@ sAndPRef = pd.read_csv('S&P500.csv', names=['Ticker', 'Company Name'], sep=",",
 
 sAndP['Symbol'] = sAndP['Symbol'].str.replace('.', '-', regex=False)
 
-spTickers = ' '.join(sAndP['Symbol'])
+brokenSymbolsList = [sAndP['Symbol'][0:101], 
+                     sAndP['Symbol'][101:202], 
+                     sAndP['Symbol'][202:303], 
+                     sAndP['Symbol'][303:404],
+                     sAndP['Symbol'][404:505]]
 
-glRaw = yf.download(
+glRaw = pd.DataFrame(columns=['Date', 'Ticker', 'Adj Close', 'Close', 'High', 'Low', 'Open', 'Volume'])
+
+for i in range(len(brokenSymbolsList)):
+    spTickers = ' '.join(brokenSymbolsList[i])
+    glSlice = yf.download(
         tickers = spTickers,
         period = '1d',
         interval = '1d',
@@ -65,14 +73,32 @@ glRaw = yf.download(
         auto_adjust = False,
         prepost = False,
         threads = True,
-        proxy = None
+        proxy = True
     )
+    time.sleep(31)
+    gl = glSlice.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
+    gl.reset_index(level=0,inplace=True)
 
-gl = glRaw.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
+    glRaw.append(gl)
 
-gl.reset_index(level=0,inplace=True)
+# spTickers = ' '.join(sAndP['Symbol'])
 
-gl.to_csv('sAndPYesterday.csv', index=False)
+# glRaw = yf.download(
+#         tickers = spTickers,
+#         period = '1d',
+#         interval = '1d',
+#         group_by = 'ticker',
+#         auto_adjust = False,
+#         prepost = False,
+#         threads = True,
+#         proxy = True
+#     )
+
+# gl = glRaw.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
+
+# gl.reset_index(level=0,inplace=True)
+
+glRaw.to_csv('sAndPYesterday.csv', index=False)
 # gl = pd.read_csv('rawYFinance.csv')
 
 # maxDate = gl['Date'].max()
