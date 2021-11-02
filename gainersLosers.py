@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
 from pandas.core.indexes import period
-import yfinance as yf
+# import yfinance as yf
 from datetime import date, datetime, timedelta
 import os
 import time
 import requests
 from datawrapper import Datawrapper
+from yahooquery import Ticker
+import json
 
 # ACCESS_TOKEN = os.getenv('DW_API_KEY')
 
@@ -55,31 +57,90 @@ sAndPRef = pd.read_csv('S&P500.csv', names=['Ticker', 'Company Name'], sep=",",
 
 sAndP['Symbol'] = sAndP['Symbol'].str.replace('.', '-', regex=False)
 
-brokenSymbolsList = [sAndP['Symbol'][0:101], 
-                     sAndP['Symbol'][101:202], 
-                     sAndP['Symbol'][202:303], 
-                     sAndP['Symbol'][303:404],
-                     sAndP['Symbol'][404:505]]
+spTickers = sAndP['Symbol'].to_list()
 
-glRaw = pd.DataFrame(columns=['Date', 'Ticker', 'Adj Close', 'Close', 'High', 'Low', 'Open', 'Volume'])
+tickers = Ticker(spTickers, asynchronous=True, retry=20, status_forcelist=[404, 429, 500, 502, 503, 504])
+yqSP500_data = tickers.history(period='1d', interval='1d')
 
-for i in range(len(brokenSymbolsList)):
-    spTickers = ' '.join(brokenSymbolsList[i])
-    glSlice = yf.download(
-        tickers = spTickers,
-        period = '1d',
-        interval = '1d',
-        group_by = 'ticker',
-        auto_adjust = False,
-        prepost = False,
-        threads = True,
-        proxy = True
-    )
-    time.sleep(31)
-    gl = glSlice.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
-    gl.reset_index(level=0,inplace=True)
+sAndPTickers = []
+sAndPLatest = []
+sAndPDates = []
 
-    glRaw.append(gl)
+for i in yqSP500_data.keys():
+    if isinstance(yqSP500_data[i], pd.DataFrame):
+            tick = i
+            sAndPTickers.append(i)
+            val = yqSP500_data[i]['close'].item()
+            sAndPLatest.append(val)
+            stockDate = yqSP500_data[i]['close'].index.item()
+            sAndPDates.append(stockDate)
+    elif isinstance(yqSP500_data[i], dict):
+            tick = i
+            sAndPTickers.append(i)
+            val = yqSP500_data[i]['meta']['regularMarketPrice']
+            sAndPLatest.append(val)
+    # else:
+    #     raise ValueError('Stock data is missing')
+
+sAndPDate = sAndPDates[1]
+sAndPDates = [sAndPDate for i in range(505)]
+
+glToday = pd.DataFrame(
+    {
+        'Ticker': sAndPTickers,
+        'Price': sAndPLatest,
+        'Date': sAndPDates
+    }
+)
+
+glToday.to_csv('sAndPYesterday.csv', index=False)
+
+# if isinstance(yqSP500_data, pd.DataFrame):
+#     print(f"The type of this object is {type(yqSP500_data)}. Writing out dataframe.")
+#     yqSP500_data.to_csv(index=False)
+# elif isinstance(yqSP500_data, dict):
+#     print(f"The type of this object is {type(yqSP500_data)}. Writing out JSON.")
+#     with open('yq_results.json', 'w') as gl:
+#         json.dump(yqSP500_data, gl)
+# else:
+#     print(f"The type of this object is {type(yqSP500_data)}. Do something else with it.")
+
+
+
+
+# gl = yqSP500_data.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
+# gl.reset_index(level=0,inplace=True)
+
+# brokenSymbolsList = [sAndP['Symbol'][0:101], 
+#                      sAndP['Symbol'][101:202], 
+#                      sAndP['Symbol'][202:303], 
+#                      sAndP['Symbol'][303:404],
+#                      sAndP['Symbol'][404:505]]
+
+# glRawList = []
+
+# for i in range(len(brokenSymbolsList)):
+#     spTickers = ' '.join(brokenSymbolsList[i])
+#     glSlice = yf.download(
+#         tickers = spTickers,
+#         period = '1d',
+#         interval = '1d',
+#         group_by = 'ticker',
+#         auto_adjust = False,
+#         prepost = False,
+#         threads = True,
+#         proxy = None
+#     )
+#     time.sleep(61)
+#     gl = glSlice.stack(level=0).rename_axis(['Date', 'Ticker']).reset_index(level=1)
+#     gl.reset_index(level=0,inplace=True)
+
+#     glRawList.append(gl)
+
+# glRaw = pd.concat(glRawList)
+
+# if len(gl) != 505:
+#     raise ValueError('Not all tickers downloaded successfully.')
 
 # spTickers = ' '.join(sAndP['Symbol'])
 
@@ -98,7 +159,7 @@ for i in range(len(brokenSymbolsList)):
 
 # gl.reset_index(level=0,inplace=True)
 
-glRaw.to_csv('sAndPYesterday.csv', index=False)
+# gl.to_csv('sAndPYesterday.csv', index=False)
 # gl = pd.read_csv('rawYFinance.csv')
 
 # maxDate = gl['Date'].max()
