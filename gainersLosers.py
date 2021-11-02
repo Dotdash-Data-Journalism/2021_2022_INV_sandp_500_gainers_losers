@@ -82,14 +82,14 @@ for i in yqSP500_data.keys():
     # else:
     #     raise ValueError('Stock data is missing')
 
-sAndPDate = sAndPDates[1]
-sAndPDates = [sAndPDate for i in range(505)]
+sAndPDate = list(set(sAndPDates))
+sAndPDateFinal = sAndPDate[0]
+sAndPDates = [sAndPDateFinal for i in range(505)]
 
 glToday = pd.DataFrame(
     {
         'Ticker': sAndPTickers,
-        'Price': sAndPLatest,
-        'Date': sAndPDates
+        'Price': sAndPLatest
     }
 )
 
