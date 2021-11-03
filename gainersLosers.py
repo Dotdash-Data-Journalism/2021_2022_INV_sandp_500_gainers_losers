@@ -8,7 +8,6 @@ import time
 import requests
 from datawrapper import Datawrapper
 from yahooquery import Ticker
-import json
 
 # ACCESS_TOKEN = os.getenv('DW_API_KEY')
 
@@ -62,38 +61,54 @@ spTickers = sAndP['Symbol'].to_list()
 tickers = Ticker(spTickers, asynchronous=True, retry=20, status_forcelist=[404, 429, 500, 502, 503, 504])
 yqSP500_data = tickers.history(period='1d', interval='1d')
 
-sAndPTickers = []
-sAndPLatest = []
-sAndPDates = []
+if isinstance(yqSP500_data, pd.DataFrame):
+    yqSP500_data.reset_index(level=['symbol', 'date'], inplace=True)
+    glToday = yqSP500_data[['symbol', 'date', 'close']]
+    glToday.rename(columns={
+        'date': 'today_date',
+        'close': 'today_price'
+    }, inplace=True)
+    glToday.to_csv("sAndPYesterday.csv", index=False)
 
-for i in yqSP500_data.keys():
-    if isinstance(yqSP500_data[i], pd.DataFrame):
-            tick = i
-            sAndPTickers.append(i)
-            val = yqSP500_data[i]['close'].item()
-            sAndPLatest.append(val)
-            stockDate = yqSP500_data[i]['close'].index.item()
-            sAndPDates.append(stockDate)
-    elif isinstance(yqSP500_data[i], dict):
-            tick = i
-            sAndPTickers.append(i)
-            val = yqSP500_data[i]['meta']['regularMarketPrice']
-            sAndPLatest.append(val)
-    # else:
-    #     raise ValueError('Stock data is missing')
+elif isinstance(yqSP500_data, dict):
+    sAndPTickers = []
+    sAndPLatest = []
+    sAndPDates = []
 
-# sAndPDate = list(set(sAndPDates))
-# sAndPDateFinal = sAndPDate[0]
-# sAndPDates = [sAndPDateFinal for i in range(505)]
+    for i in yqSP500_data.keys():
+        if isinstance(yqSP500_data[i], pd.DataFrame):
+                tick = i
+                sAndPTickers.append(i)
+                val = yqSP500_data[i]['close'].item()
+                sAndPLatest.append(val)
+                stockDate = yqSP500_data[i]['close'].index.item()
+                sAndPDates.append(stockDate)
+        elif isinstance(yqSP500_data[i], dict):
+                tick = i
+                sAndPTickers.append(i)
+                val = yqSP500_data[i]['meta']['regularMarketPrice']
+                sAndPLatest.append(val)
+        # else:
+        #     raise ValueError('Stock data is missing')
 
-glToday = pd.DataFrame(
-    {
-        'Ticker': sAndPTickers,
-        'Price': sAndPLatest
-    }
-)
+    # sAndPDate = list(set(sAndPDates))
+    # sAndPDateFinal = sAndPDate[0]
+    # sAndPDates = [sAndPDateFinal for i in range(505)]
 
-glToday.to_csv('sAndPYesterday.csv', index=False)
+    glToday = pd.DataFrame(
+        {
+            'symbol': sAndPTickers,
+            'today_price': sAndPLatest
+        }
+    )
+
+    glToday.to_csv('sAndPYesterday.csv', index=False)
+else:
+    print(f"Data returned from yahooquery is of type {type(yqSP500_data)}")
+
+
+
+
 
 # if isinstance(yqSP500_data, pd.DataFrame):
 #     print(f"The type of this object is {type(yqSP500_data)}. Writing out dataframe.")
