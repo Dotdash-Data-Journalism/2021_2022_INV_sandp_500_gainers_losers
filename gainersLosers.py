@@ -9,9 +9,9 @@ import requests
 from datawrapper import Datawrapper
 from yahooquery import Ticker
 
-# ACCESS_TOKEN = os.getenv('DW_API_KEY')
+ACCESS_TOKEN = os.getenv('DW_API_KEY')
 
-# dw = Datawrapper(access_token=ACCESS_TOKEN)
+dw = Datawrapper(access_token=ACCESS_TOKEN)
 
 def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
     dw.add_data(
@@ -49,6 +49,12 @@ def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
 # sAndPRef = sAndP[['Symbol', 'Security']]
 # sAndPRef.rename(columns={"Symbol":"Ticker", "Security":"Company Name"}, inplace=True)
 
+sAndPYesterday = pd.read_csv('sAndPYesterday.csv',
+                             header=0, dtype={'symbol':str, 'yesterday_price':np.float64},
+                             parse_dates=[2])
+
+sAndPYesterday.yesterday_price = sAndPYesterday.yesterday_price.astype(float)
+
 sAndP = pd.read_csv('S&P500.csv', names=['Symbol', 'Security'], sep=",",
                     dtype={'Symbol':str, 'Security':str}, skiprows=1)
 sAndPRef = pd.read_csv('S&P500.csv', names=['Ticker', 'Company Name'], sep=",",
@@ -68,7 +74,7 @@ if isinstance(yqSP500_data, pd.DataFrame):
         'date': 'today_date',
         'close': 'today_price'
     }, inplace=True)
-    glToday.to_csv("sAndPYesterday.csv", index=False)
+    
 
 elif isinstance(yqSP500_data, dict):
     sAndPTickers = []
@@ -102,7 +108,7 @@ elif isinstance(yqSP500_data, dict):
         }
     )
 
-    glToday.to_csv('sAndPYesterday.csv', index=False)
+    
 else:
     print(f"Data returned from yahooquery is of type {type(yqSP500_data)}")
 
@@ -177,11 +183,11 @@ else:
 # gl.to_csv('sAndPYesterday.csv', index=False)
 # gl = pd.read_csv('rawYFinance.csv')
 
-# maxDate = gl['Date'].max()
-# minDate = gl['Date'].min()
+maxDate = glToday['today_date'].max()
+minDate = sAndPYesterday['yesterday_date'].min()
 
-# todayGL = gl[gl['Date'] == maxDate].sort_values(by='Ticker')
-# yesterdayGL = gl[gl['Date'] == minDate].sort_values(by='Ticker') 
+todayGL = glToday[glToday['today_date'] == maxDate].sort_values(by='symbol')
+yesterdayGL = sAndPYesterday[sAndPYesterday['yesterday_date'] == minDate].sort_values(by='symbol') 
 
 # todayGL.rename(columns={'Date': 'Today Date', 
 #                         'Adj Close': 'Today Adj Close', 
@@ -199,47 +205,52 @@ else:
 #                         'Open': 'Yesterday Open',
 #                         'Volume': 'Yesterday Volume'}, inplace=True)
 
-# comboGL = pd.merge(todayGL, yesterdayGL, on='Ticker', how='inner')
+comboGL = pd.merge(todayGL, yesterdayGL, on='symbol', how='inner')
 
-# def getPctChg(New, Old):
-#     pctChg = (New - Old) / (Old)
-#     return pctChg
+def getPctChg(New, Old):
+    pctChg = (New - Old) / (Old)
+    return pctChg
 
-# glPctChg = list(map(lambda x,y: getPctChg(x, y), comboGL['Today Close'],comboGL['Yesterday Close']))
+glPctChg = list(map(lambda x,y: getPctChg(x, y), comboGL['today_price'],comboGL['yesterday_price']))
 
-# comboGL.rename(columns={'Today Date': 'Date', 'Today Close': 'Close'}, inplace=True)
+comboGLSliced = comboGL[['symbol', 'today_date', 'today_price']]
+comboGLSliced.rename(columns={'today_date': 'Today Date', 'today_price':'Close', 'symbol':'Ticker'}, inplace=True)
 
-# fullGL = comboGL[['Date', 'Ticker', 'Close']]
-# fullGL['1 Day Returns'] = pd.Series(glPctChg).values
-# fullGL['Close'] = [round(x, 2) for x in fullGL['Close']]
+fullGL = comboGLSliced[['Ticker', 'Close']]
+fullGL['1 Day Returns'] = pd.Series(glPctChg).values
+fullGL['Close'] = [round(x, 2) for x in fullGL['Close']]
 
-# fullGL = fullGL.merge(sAndPRef, how='left', on='Ticker')
-
-
-# biggestLosers = fullGL.sort_values(by=['1 Day Returns']).iloc[0:8,:].reset_index()
-# biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[0:8,:].reset_index()
-
-# biggestLosers.rename(columns={'1 Day Returns':'% Loss'}, inplace=True)
-# biggestGainers.rename(columns={'1 Day Returns':'% Gain'}, inplace=True)
-
-# biggestLosers.rename(columns={'Close':'Price\u061C'}, inplace=True)
-# biggestGainers.rename(columns={'Close':'Price'}, inplace=True)
-
-# biggestLosers['% Loss'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestLosers['% Loss']]
-# biggestGainers['% Gain'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestGainers['% Gain']]
+fullGL = fullGL.merge(sAndPRef, how='left', on='Ticker')
 
 
-# biggestLosers['Biggest Losses'] = biggestLosers[['Ticker', 'Company Name']].agg(', '.join, axis=1)
-# biggestGainers['Biggest Gains'] = biggestGainers[['Ticker', 'Company Name']].agg(', '.join, axis=1)
+biggestLosers = fullGL.sort_values(by=['1 Day Returns']).iloc[0:8,:].reset_index()
+biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[0:8,:].reset_index()
 
-# blFinal = biggestLosers[['Biggest Losses', 'Price\u061C', '% Loss']]
-# bgFinal = biggestGainers[['Biggest Gains', 'Price', '% Gain']]
+biggestLosers.rename(columns={'1 Day Returns':'% Loss'}, inplace=True)
+biggestGainers.rename(columns={'1 Day Returns':'% Gain'}, inplace=True)
+
+biggestLosers.rename(columns={'Close':'Price\u061C'}, inplace=True)
+biggestGainers.rename(columns={'Close':'Price'}, inplace=True)
+
+biggestLosers['% Loss'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestLosers['% Loss']]
+biggestGainers['% Gain'] = ['{0:.2f}'.format(x * 100) + '%' for x in biggestGainers['% Gain']]
 
 
-# biggestLG = pd.concat([bgFinal, blFinal], axis=1)
+biggestLosers['Biggest Losses'] = biggestLosers[['Ticker', 'Company Name']].agg(', '.join, axis=1)
+biggestGainers['Biggest Gains'] = biggestGainers[['Ticker', 'Company Name']].agg(', '.join, axis=1)
 
-# biggestLG.to_csv('gl.csv', index=False)
+blFinal = biggestLosers[['Biggest Losses', 'Price\u061C', '% Loss']]
+bgFinal = biggestGainers[['Biggest Gains', 'Price', '% Gain']]
 
-# fileDate = str(datetime.today().strftime('%B %d, %Y'))
 
-# updateChart('k53KU', biggestLG, fileDate, ACCESS_TOKEN)
+biggestLG = pd.concat([bgFinal, blFinal], axis=1)
+
+biggestLG.to_csv('gl.csv', index=False)
+
+fileDate = str(datetime.today().strftime('%B %d, %Y'))
+
+updateChart('k53KU', biggestLG, fileDate, ACCESS_TOKEN)
+
+## Rename columms then write out!!
+glToday.rename(columns={'today_date': 'yesterday_date', 'today_price':'yesterday_price'}, inplace=True)
+glToday.to_csv("sAndPYesterday.csv", index=False)
