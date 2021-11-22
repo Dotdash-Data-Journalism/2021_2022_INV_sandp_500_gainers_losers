@@ -79,7 +79,7 @@ if isinstance(yqSP500_data, pd.DataFrame):
 elif isinstance(yqSP500_data, dict):
     sAndPTickers = []
     sAndPLatest = []
-    sAndPDates = []
+    # sAndPDates = []
 
     for i in yqSP500_data.keys():
         if isinstance(yqSP500_data[i], pd.DataFrame):
@@ -87,24 +87,27 @@ elif isinstance(yqSP500_data, dict):
                 sAndPTickers.append(i)
                 val = yqSP500_data[i]['close'].item()
                 sAndPLatest.append(val)
-                stockDate = yqSP500_data[i]['close'].index.item()
-                sAndPDates.append(stockDate)
+                # stockDate = yqSP500_data[i]['close'].index.item()
+                # sAndPDates.append(stockDate)
         elif isinstance(yqSP500_data[i], dict):
                 tick = i
                 sAndPTickers.append(i)
                 val = yqSP500_data[i]['meta']['regularMarketPrice']
                 sAndPLatest.append(val)
-        # else:
-        #     raise ValueError('Stock data is missing')
+        else:
+            raise ValueError('Stock data is missing')
 
     # sAndPDate = list(set(sAndPDates))
     # sAndPDateFinal = sAndPDate[0]
     # sAndPDates = [sAndPDateFinal for i in range(505)]
+    sAndPDate = date.today().strftime('%Y-%m-%d')
+    sAndPDates = [sAndPDate] * len(sAndPTickers)
 
     glToday = pd.DataFrame(
         {
             'symbol': sAndPTickers,
-            'today_price': sAndPLatest
+            'today_price': sAndPLatest,
+            'today_date': sAndPDates
         }
     )
 
