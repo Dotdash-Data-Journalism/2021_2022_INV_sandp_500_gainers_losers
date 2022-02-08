@@ -61,6 +61,7 @@ def getSimOAuth(pw):
         res.raise_for_status()
         simOAuthJSON = res.json()
         simOAuthAccess = simOAuthJSON['access_token']
+        return(simOAuthAccess)
         
     except requests.exceptions.HTTPError as errh:
         print(f"Http Error:{errh}")
@@ -71,7 +72,7 @@ def getSimOAuth(pw):
     except requests.exceptions.RequestException as err:
         print(f"Oops: Something Else:{err}")
     
-    return(simOAuthAccess)
+    
 
 # Function to use yfinance to get ticker data
 def getYFinance(ticker):
