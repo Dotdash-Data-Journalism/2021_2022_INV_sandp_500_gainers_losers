@@ -6,10 +6,13 @@ from datetime import date, datetime, timedelta
 import os
 import time
 import requests
+from urllib.parse import quote
+import yfinance as yf
 from datawrapper import Datawrapper
 
 # Getting Datawrapper API key from Github Repository Secret
 ACCESS_TOKEN = os.getenv('DW_API_KEY')
+SIM_PW = os.getenv('SIM_PW')
 
 # Activating Datawrapper class used to send new data to chart
 dw = Datawrapper(access_token=ACCESS_TOKEN)
@@ -34,7 +37,7 @@ def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
                                 url="https://api.datawrapper.de/v3/charts/" + dw_chart_id, 
                                 json={"metadata": {
                                         "annotate": {
-                                            "notes": "Data from Yahoo Finance. Updated " + fileDate
+                                            "notes": "Data from Investopedia & Yahoo Finance. Updated " + fileDate
                                     }
                                 }},
                                 headers=headers)
@@ -45,11 +48,20 @@ def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
 
     dw.publish_chart(chart_id=dw_chart_id)
 
-# Function to get Xignite stock price data from Hermes
-def getSAndPJSON(url):
+# Function to get simulator OAuth Key
+def getSimOAuth(pw):
     try:
-        r = requests.get(url,timeout=3)
-        r.raise_for_status()
+        simHeaders = {'Content-Type': 'application/x-www-form-urlencoded'}
+        payload = {'client_id':'inv-simulator', 'username':quote('anesta95'), 'grant_type':'password', 'password':pw}
+
+        res = requests.post(url='https://www.investopedia.com/auth/realms/investopedia/protocol/openid-connect/token',
+                    headers=simHeaders,
+                    data=payload
+        )
+        res.raise_for_status()
+        simOAuthJSON = res.json()
+        simOAuthAccess = simOAuthJSON['access_token']
+        
     except requests.exceptions.HTTPError as errh:
         print(f"Http Error:{errh}")
     except requests.exceptions.ConnectionError as errc:
@@ -59,8 +71,64 @@ def getSAndPJSON(url):
     except requests.exceptions.RequestException as err:
         print(f"Oops: Something Else:{err}")
     
-    rJSON = r.json()
-    return(rJSON)
+    return(simOAuthAccess)
+
+# Function to use yfinance to get ticker data
+def getYFinance(ticker):
+    yfTicker = ticker.replace('.', '-')
+    yfRes = yf.Ticker(yfTicker)
+    tickerDF = yfRes.history(period='5d', interval='1d', prepost=False, auto_adjust=False, actions=False)
+    time.sleep(0.25)
+    tickerDF.reset_index(level=0, inplace=True)
+    tickerDFSorted = tickerDF.sort_values(by=['Date'], ascending=False).reset_index(drop=True)
+    todayPrice = float(tickerDFSorted['Close'][0])
+    yesterdayPrice = float(tickerDFSorted['Close'][1])
+    dodChgYF = round(((todayPrice - yesterdayPrice) / yesterdayPrice) * 100, 2)
+    stockData = {"closePrice": todayPrice, "dayChangePercent": dodChgYF}
+
+    return(stockData)
+
+# Function to get individual stock data
+def getSAndP500Data(ticker, OAuth):
+    try:
+        query = f"""query {{
+    readStock(symbol:"{ticker}") {{
+        ...on Stock {{
+        technical {{
+            closePrice
+            dayChangePercent
+            dayChangePrice
+        }}
+        }}
+    }}
+    }}"""
+        simAuth = {'Authorization': f"Bearer {OAuth}", 'Origin': 'https://www.investopedia.com/'}
+        res = requests.post(url="https://api.investopedia.com/simulator/graphql", 
+                    headers=simAuth,
+                    json={'query': query})
+
+        stockJSON = res.json()
+        # Check to see if simulator has ticker data, if not use yfinance
+        if stockJSON is None:
+            stockData = getYFinance(ticker=ticker)
+        elif stockJSON['data'] is None:
+            stockData = getYFinance(ticker=ticker)
+        elif not stockJSON['data']['readStock']:
+            stockData = getYFinance(ticker=ticker)
+        else:
+            stockData = stockJSON['data']['readStock']['technical']
+            
+    except requests.exceptions.HTTPError as errh:
+        print(f"Http Error:{errh}")
+    except requests.exceptions.ConnectionError as errc:
+        print(f"Error Connecting:{errc}")
+    except requests.exceptions.Timeout as errt:
+        print(f"Timeout Error:{errt}")
+    except requests.exceptions.RequestException as err:
+        print(f"Oops: Something Else:{err}")
+
+    return(stockData)
+    
 
 # Function to scrape the S&P 500 tickers from the S&P 500 Wikipedia page
 # https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
@@ -73,19 +141,22 @@ def getSAndPTickers(url):
     sAndPRef = sAndP[['Symbol', 'Security']]
     sAndPRef.rename(columns={"Symbol":"Ticker", "Security":"Company Name"}, inplace=True)
 
-    # On the wikipedia pages the "." in the ticker needs to actually be replaced with a '-' 
-    sAndPRef['Ticker'] = sAndPRef['Ticker'].str.replace('.', '-', regex=False)
+    # On the wikipedia pages the "." in the ticker needs to actually be replaced with a '-' for yfinance
+    # I don't think this is the case for the investo simulator
+    # sAndPRef['Ticker'] = sAndPRef['Ticker'].str.replace('.', '-', regex=False)
 
-    tickers_list = sAndPRef['Ticker'].to_list()
-
-    return(tickers_list)
+    return(sAndPRef)
 
 # Function to create the final pandas dataframe sent to Datawrapper S&P 500 gainers/losers chart
-def createGainersLosers(dict):
+def createGainersLosers(dict, df):
     fullGL = pd.DataFrame(dict)
 
-    biggestLosers = fullGL.sort_values(by=['1 Day Returns']).iloc[0:8,:].reset_index()
-    biggestGainers = fullGL.sort_values(by=['1 Day Returns'], ascending=False).iloc[0:8,:].reset_index()
+    sAndPRef = df[['Ticker', 'Company Name']]
+
+    fullGLMerged = fullGL.merge(sAndPRef, how='left', on='Ticker')
+
+    biggestLosers = fullGLMerged.sort_values(by=['1 Day Returns']).iloc[0:8,:].reset_index()
+    biggestGainers = fullGLMerged.sort_values(by=['1 Day Returns'], ascending=False).iloc[0:8,:].reset_index()
 
     biggestLosers.rename(columns={'1 Day Returns':'% Loss'}, inplace=True)
     biggestGainers.rename(columns={'1 Day Returns':'% Gain'}, inplace=True)
@@ -110,43 +181,38 @@ def createGainersLosers(dict):
     return(gainers_losers)
 
 
-spTickers = getSAndPTickers(url='https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
+sAndPDF = getSAndPTickers(url='https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
+
+spTickers = sAndPDF['Ticker'].to_list()
+
+simOAuth = getSimOAuth(pw=SIM_PW)
 
 tickers = []
 dodChg = []
-companyName = []
 close = []
 
 # Grabbing all 505 stock data in a loop
 for i in range(len(spTickers)):
-    resDict = getSAndPJSON(url=f'https://hermes-stable.a-ue1.dotdash.com/Simulator/stock?symbol={spTickers[i]}')
+    resDict = getSAndP500Data(ticker=spTickers[i], OAuth=simOAuth)
     if isinstance(resDict, dict):
-        tickerData = resDict['data'][0]
-        todayClose = float(tickerData['Last'])
-        yestClose = float(tickerData['PreClose'])
-        ticker = tickerData['Symbol']
-        fullName = tickerData['Description']
-        pctChg = round(((todayClose - yestClose) / yestClose) * 100, 2)
+        pctChg = float(resDict['dayChangePercent'])
+        todayClose = float(resDict['closePrice'])
+        ticker = spTickers[i]
         tickers.append(ticker)
         dodChg.append(pctChg)
-        companyName.append(fullName)
         close.append(todayClose)
-        # I set this to 1 second but can adjust as needed.
-        # I don't know the capabilities/rate-limiting of hermes/xignite so
-        # please advise if I should change
-        time.sleep(1)
+        time.sleep(0.5)
     else:
         break
 
 # Making sure data for every ticker was put in the lists
-if len(tickers) == 505 & len(companyName) == 505 & len(dodChg) == 505 & len(close) == 505:
+if len(tickers) == 505 & len(dodChg) == 505 & len(close) == 505:
     dataDict = {'Ticker': tickers,
-             'Company Name': companyName,
              '1 Day Returns': dodChg,
              'Close': close
     }
 
-    biggestLG = createGainersLosers(dict=dataDict)
+    biggestLG = createGainersLosers(dict=dataDict, df=sAndPDF)
 
     biggestLG.to_csv('gl.csv', index=False)
 
