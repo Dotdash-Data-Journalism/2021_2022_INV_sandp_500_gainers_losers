@@ -4,9 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-yfinance = "*"
 datawrapper = "*"
-yahooquery = "*"
+yfinance = "*"
 
 [dev-packages]
 
