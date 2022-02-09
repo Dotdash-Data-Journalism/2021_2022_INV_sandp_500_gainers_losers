@@ -64,13 +64,13 @@ def getSimOAuth(pw):
         return(simOAuthAccess)
         
     except requests.exceptions.HTTPError as errh:
-        print(f"Http Error:{errh}")
+        print(f"OAuth Http Error:{errh}")
     except requests.exceptions.ConnectionError as errc:
-        print(f"Error Connecting:{errc}")
+        print(f"OAuth Connecting:{errc}")
     except requests.exceptions.Timeout as errt:
-        print(f"Timeout Error:{errt}")
+        print(f"OAuth Error:{errt}")
     except requests.exceptions.RequestException as err:
-        print(f"Oops: Something Else:{err}")
+        print(f"OAuth Oops: Something Else:{err}")
     
     
 
@@ -120,13 +120,13 @@ def getSAndP500Data(ticker, OAuth):
             stockData = stockJSON['data']['readStock']['technical']
             
     except requests.exceptions.HTTPError as errh:
-        print(f"Http Error:{errh}")
+        print(f"GraphQL Http Error:{errh}")
     except requests.exceptions.ConnectionError as errc:
-        print(f"Error Connecting:{errc}")
+        print(f"GraphQL Error Connecting:{errc}")
     except requests.exceptions.Timeout as errt:
-        print(f"Timeout Error:{errt}")
+        print(f"GraphQL Timeout Error:{errt}")
     except requests.exceptions.RequestException as err:
-        print(f"Oops: Something Else:{err}")
+        print(f"GraphQL Oops: Something Else:{err}")
 
     return(stockData)
     
