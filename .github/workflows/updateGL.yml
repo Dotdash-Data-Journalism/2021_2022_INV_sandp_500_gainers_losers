@@ -28,6 +28,7 @@ jobs:
         run: pipenv run python gainersLosers.py
         env: 
           DW_API_KEY: ${{ secrets.DW_API_KEY }}
+          INV_SIM_PW: ${{ secrets.INV_SIM_PW}}
         
           
       - name: commit & push files
