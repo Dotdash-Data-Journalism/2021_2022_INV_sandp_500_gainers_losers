@@ -84,8 +84,9 @@ def getYFinance(ticker):
     tickerDFSorted = tickerDF.sort_values(by=['Date'], ascending=False).reset_index(drop=True)
     todayPrice = float(tickerDFSorted['Close'][0])
     yesterdayPrice = float(tickerDFSorted['Close'][1])
+    dayChangePrice = todayPrice - yesterdayPrice
     dodChgYF = round(((todayPrice - yesterdayPrice) / yesterdayPrice) * 100, 2)
-    stockData = {"closePrice": todayPrice, "dayChangePercent": dodChgYF}
+    stockData = {"closePrice": yesterdayPrice, "dayChangePercent": dodChgYF, "dayChangePrice": dayChangePrice}
 
     return(stockData)
 
@@ -197,7 +198,9 @@ for i in range(len(spTickers)):
     resDict = getSAndP500Data(ticker=spTickers[i], OAuth=simOAuth)
     if isinstance(resDict, dict):
         pctChg = float(resDict['dayChangePercent'])
-        todayClose = float(resDict['closePrice'])
+        yesterdayClose = float(resDict['closePrice'])
+        priceChange = float(resDict['dayChangePrice'])
+        todayClose = yesterdayClose + priceChange
         ticker = spTickers[i]
         tickers.append(ticker)
         dodChg.append(pctChg)
