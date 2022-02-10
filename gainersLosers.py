@@ -12,7 +12,7 @@ from datawrapper import Datawrapper
 
 # Getting Datawrapper API key from Github Repository Secret
 ACCESS_TOKEN = os.getenv('DW_API_KEY')
-SIM_PW = os.getenv('SIM_PW')
+SIM_PW = os.getenv('INV_SIM_PW')
 
 # Activating Datawrapper class used to send new data to chart
 dw = Datawrapper(access_token=ACCESS_TOKEN)
