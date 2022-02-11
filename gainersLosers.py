@@ -27,7 +27,7 @@ def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
 
     dataRefresh = requests.put(url=f"https://api.datawrapper.de/v3/charts/{dw_chart_id}/data", 
     data=stringDataSet,
-    headers=headers)
+    headers={"Authorization": f"Bearer {dw_api_key}"})
 
     dataRefresh.raise_for_status()
 
