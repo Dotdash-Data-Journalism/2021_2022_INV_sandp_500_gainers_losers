@@ -8,45 +8,49 @@ import time
 import requests
 from urllib.parse import quote
 import yfinance as yf
-from datawrapper import Datawrapper
 
 # Getting Datawrapper API key from Github Repository Secret
 ACCESS_TOKEN = os.getenv('DW_API_KEY')
 SIM_PW = os.getenv('INV_SIM_PW')
 
-# Activating Datawrapper class used to send new data to chart
-dw = Datawrapper(access_token=ACCESS_TOKEN)
-
 # Function used to add new data to datawrapper chart via a pandas dataframe and 
 # places the latest update date in the chart notes
 def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
-    dw.add_data(
-    chart_id=dw_chart_id,
-    data=dataSet
-    )
-
-    time.sleep(2)
 
     headers = {
     "Accept": "*/*",
     "Content-Type": "application/json",
-    "Authorization": "Bearer " + dw_api_key
+    "Authorization": f"Bearer {dw_api_key}"
     }
 
-    response = requests.request(method="PATCH", 
-                                url="https://api.datawrapper.de/v3/charts/" + dw_chart_id, 
-                                json={"metadata": {
-                                        "annotate": {
-                                            "notes": "Data from Investopedia & Yahoo Finance. Updated " + fileDate
-                                    }
-                                }},
-                                headers=headers)
+    stringDataSet = dataSet.to_csv(path_or_buf=None, index=False, header=True)   
 
-    response.raise_for_status()
+    dataRefresh = requests.put(url=f"https://api.datawrapper.de/v3/charts/{dw_chart_id}/data", 
+    data=stringDataSet,
+    headers=headers)
+
+    dataRefresh.raise_for_status()
 
     time.sleep(2)
 
-    dw.publish_chart(chart_id=dw_chart_id)
+    callBack = {"metadata": {
+                    "annotate": {
+                        "notes": f"Data from Investopedia & Yahoo Finance. Updated {updateDate}"
+                    }
+                }
+            }
+    notesRes = requests.patch(url=f"https://api.datawrapper.de/v3/charts/{dw_chart_id}",
+    json=callBack,
+    headers=headers)
+
+    notesRes.raise_for_status()
+
+    time.sleep(2)
+
+    publishRes = requests.post(url=f"https://api.datawrapper.de/v3/charts/{dw_chart_id}/publish",
+    headers=headers)
+
+    publishRes.raise_for_status()
 
 # Function to get simulator OAuth Key
 def getSimOAuth(pw):
