@@ -138,7 +138,7 @@ def getSAndPTickers(url):
     table = pd.read_html(io=url)
     sAndP = table[0]
     assert isinstance(sAndP, pd.DataFrame),"Wikipedia table not scraped"
-    assert sAndP['Symbol'].count() == 505,"Not all 505 S&P Tickers Present"
+    # assert sAndP['Symbol'].count() == 505,"Not all 505 S&P Tickers Present"
 
     sAndPRef = sAndP[['Symbol', 'Security']]
     sAndPRef.rename(columns={"Symbol":"Ticker", "Security":"Company Name"}, inplace=True)
@@ -187,6 +187,9 @@ sAndPDF = getSAndPTickers(url='https://en.wikipedia.org/wiki/List_of_S%26P_500_c
 
 spTickers = sAndPDF['Ticker'].to_list()
 
+# See how many tickers there are
+numTickers = sAndPDF['Ticker'].count()
+
 simOAuth = getSimOAuth(pw=SIM_PW)
 
 tickers = []
@@ -210,7 +213,7 @@ for i in range(len(spTickers)):
         break
 
 # Making sure data for every ticker was put in the lists
-if len(tickers) == 505 & len(dodChg) == 505 & len(close) == 505:
+if len(tickers) == numTickers & len(dodChg) == numTickers & len(close) == numTickers:
     dataDict = {'Ticker': tickers,
              '1 Day Returns': dodChg,
              'Close': close
