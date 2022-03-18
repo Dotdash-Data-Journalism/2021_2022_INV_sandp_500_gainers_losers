@@ -221,7 +221,7 @@ if len(tickers) == numTickers & len(dodChg) == numTickers & len(close) == numTic
 
     biggestLG = createGainersLosers(dict=dataDict, df=sAndPDF)
 
-    biggestLG.to_csv('gl.csv', index=False)
+    biggestLG.to_csv('./visualizations/gl.csv', index=False)
 
     fileDate = str(datetime.today().strftime('%B %d, %Y'))
 
