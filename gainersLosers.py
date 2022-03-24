@@ -48,6 +48,20 @@ def updateChart(dw_chart_id, dataSet, updateDate, dw_api_key):
 
     dw.publish_chart(chart_id=dw_chart_id)
 
+    imgHeaders = {
+        "Accept": "image/png",
+        "Authorization": f"Bearer {dw_api_key}"
+        }
+    pngDwnldRes = requests.get(url=f"https://api.datawrapper.de/v3/charts/{dw_chart_id}/export/png?unit=px&mode=rgb&width=463&height=auto&plain=false&scale=1&zoom=2&download=false&fullVector=false&ligatures=true&transparent=false&logo=auto&dark=false",
+    headers=imgHeaders)
+
+    pngDwnldRes.raise_for_status()
+    latestPNG = pngDwnldRes.content
+
+    file = open('latestGainersLosers.png', 'wb')
+    file.write(latestPNG)
+    file.close()
+
 # Function to get simulator OAuth Key
 def getSimOAuth(pw):
     try:
