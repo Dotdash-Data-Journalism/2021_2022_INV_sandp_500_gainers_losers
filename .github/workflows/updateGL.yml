@@ -30,13 +30,10 @@ jobs:
           DW_API_KEY: ${{ secrets.DW_API_KEY }}
           INV_SIM_PW: ${{ secrets.INV_SIM_PW}}
         
-          
-      - name: commit & push files
-        run: |
-          git pull
-          git config --local user.email "actions@users.noreply.github.com"
-          git config --local user.name "Automated"
-          git add -A
-          timestamp=$(date -u)
-          git commit -m "Latest Gainers Losers Update: ${timestamp}" || exit 0
-          git push
+      - name: Add and commit
+        id: add_commit
+        uses: EndBug/add-and-commit@v8
+        with:
+          committer_name: Automated
+          committer_email: actions@users.noreply.github.com
+          message: "Latest data"
