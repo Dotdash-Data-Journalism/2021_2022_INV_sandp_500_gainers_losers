@@ -3,7 +3,7 @@ name: scraper-gl-indices-yahoo-finance
 on:
   workflow_dispatch:
   schedule:
-    - cron: '19 20 * * 1-5' # runs once every day at 4:31 pm Eastern Time US (after market close)
+    - cron: '21 20 * * 1-5' # runs once every day at 4:31 pm Eastern Time US (after market close)
 
 jobs:
   build:
